@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-Flow AI | Smart Digital Queue & Crowd Prediction System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dark-theme">
+
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand-logo">
+                <div class="logo-icon">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-title">Q-Flow <span class="gradient-text">AI</span></span>
+                    <span class="logo-subtitle">Smart Queue & Crowd Prediction</span>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs" id="mainNav">
+                <button class="nav-tab active" data-tab="kiosk" id="tab-btn-kiosk">
+                    <i class="bi bi-ticket-perforated"></i>
+                    <span>Kiosk</span>
+                </button>
+                <button class="nav-tab" data-tab="display" id="tab-btn-display">
+                    <i class="bi bi-tv"></i>
+                    <span>Live Display</span>
+                </button>
+                <button class="nav-tab" data-tab="operator" id="tab-btn-operator">
+                    <i class="bi bi-person-workspace"></i>
+                    <span>Counter Desk</span>
+                </button>
+                <button class="nav-tab" data-tab="track" id="tab-btn-track">
+                    <i class="bi bi-qr-code-scan"></i>
+                    <span>Track Ticket</span>
+                </button>
+                <button class="nav-tab" data-tab="prediction" id="tab-btn-prediction">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Crowd AI</span>
+                </button>
+                <button class="nav-tab" data-tab="database" id="tab-btn-database">
+                    <i class="bi bi-database-check"></i>
+                    <span>Database & Ops</span>
+                </button>
+            </nav>
+
+            <!-- Header Controls -->
+            <div class="header-controls">
+                <button class="control-btn" id="voiceToggleBtn" title="Toggle Audio Announcements">
+                    <i class="bi bi-volume-up-fill" id="voiceIcon"></i>
+                    <span class="btn-label" id="voiceLabel">Voice ON</span>
+                </button>
+                <div class="live-status-badge">
+                    <span class="status-pulse"></span>
+                    <span>Live DB Sync</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Metrics Strip -->
+        <div class="metrics-strip">
+            <div class="metric-item">
+                <span class="metric-label">Waiting in Queue</span>
+                <span class="metric-value text-amber" id="stripWaitingCount">--</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+                <span class="metric-label">Being Served</span>
+                <span class="metric-value text-blue" id="stripServingCount">--</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+                <span class="metric-label">Completed Today</span>
+                <span class="metric-value text-emerald" id="stripCompletedCount">--</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+                <span class="metric-label">Avg Wait Time</span>
+                <span class="metric-value text-purple" id="stripAvgWait">-- min</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+                <span class="metric-label">Active Counters</span>
+                <span class="metric-value text-cyan" id="stripActiveCounters">--</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="app-main">
+
+        <!-- ============================================================= -->
+        <!-- TAB 1: KIOSK / SELF-SERVICE TOKEN ISSUANCE                    -->
+        <!-- ============================================================= -->
+        <section class="tab-view active" id="view-kiosk">
+            <div class="view-header">
+                <div class="view-titles">
+                    <h2><i class="bi bi-ticket-detailed-fill gradient-text"></i> Self-Service Token Kiosk</h2>
+                    <p>Select your required service department, priority status, and generate your digital queue token.</p>
+                </div>
+                <div class="kiosk-time-badge">
+                    <i class="bi bi-clock"></i>
+                    <span id="kioskClock">--:--:--</span>
+                </div>
+            </div>
+
+            <div class="kiosk-grid">
+                <!-- Step 1: Department Selection -->
+                <div class="kiosk-card">
+                    <div class="card-step-badge">Step 1</div>
+                    <h3>Select Department / Service</h3>
+                    <div class="departments-selector" id="kioskDepartmentsList">
+                        <!-- Populated dynamically via JS -->
+                        <div class="loading-spinner"><i class="bi bi-arrow-repeat spin"></i> Loading departments...</div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Customer Details & Priority -->
+                <div class="kiosk-card">
+                    <div class="card-step-badge">Step 2</div>
+                    <h3>Visitor Details & Priority Level</h3>
+                    
+                    <form id="tokenIssueForm" onsubmit="event.preventDefault(); issueNewToken();">
+                        <div class="form-group">
+                            <label for="custNameInput"><i class="bi bi-person"></i> Full Name (Optional)</label>
+                            <input type="text" id="custNameInput" class="form-input" placeholder="e.g. Johnathan Smith" maxlength="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="custPhoneInput"><i class="bi bi-phone"></i> Mobile Phone (Optional for SMS tracker)</label>
+                            <input type="tel" id="custPhoneInput" class="form-input" placeholder="e.g. +1 555-0199" maxlength="20">
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="bi bi-star"></i> Select Queue Category / Priority</label>
+                            <div class="priority-options">
+                                <label class="priority-card active" data-priority="REGULAR">
+                                    <input type="radio" name="priorityLevel" value="REGULAR" checked>
+                                    <div class="p-icon"><i class="bi bi-person"></i></div>
+                                    <div class="p-details">
+                                        <span class="p-title">Regular</span>
+                                        <span class="p-sub">Standard FIFO queue</span>
+                                    </div>
+                                </label>
+
+                                <label class="priority-card" data-priority="SENIOR_CITIZEN">
+                                    <input type="radio" name="priorityLevel" value="SENIOR_CITIZEN">
+                                    <div class="p-icon text-amber"><i class="bi bi-heart-pulse"></i></div>
+                                    <div class="p-details">
+                                        <span class="p-title">Senior / Specially-Abled</span>
+                                        <span class="p-sub">Expedited queue handling</span>
+                                    </div>
+                                </label>
+
+                                <label class="priority-card" data-priority="VIP_URGENT">
+                                    <input type="radio" name="priorityLevel" value="VIP_URGENT">
+                                    <div class="p-icon text-purple"><i class="bi bi-lightning-charge"></i></div>
+                                    <div class="p-details">
+                                        <span class="p-title">Urgent / Fast Track</span>
+                                        <span class="p-sub">Immediate priority placement</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="kiosk-summary-box" id="kioskSummaryBox">
+                            <div class="summary-line">
+                                <span>Selected Department:</span>
+                                <strong id="summaryDeptName">None</strong>
+                            </div>
+                            <div class="summary-line">
+                                <span>Estimated Waiting Time:</span>
+                                <strong class="text-emerald" id="summaryEstWait">~0 mins</strong>
+                            </div>
+                            <div class="summary-line">
+                                <span>Current Waiting Queue:</span>
+                                <strong class="text-amber" id="summaryQueueAhead">0 people ahead</strong>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary-large" id="btnIssueTicket">
+                            <i class="bi bi-printer"></i>
+                            <span>Print Digital Token</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Digital Ticket Modal / Result Card -->
+            <div class="modal-backdrop" id="ticketModal">
+                <div class="ticket-slip" id="ticketSlip">
+                    <button class="modal-close-btn" onclick="closeTicketModal()"><i class="bi bi-x-lg"></i></button>
+                    <div class="slip-header">
+                        <div class="slip-org">SMART SERVICE CENTER</div>
+                        <div class="slip-type" id="modalDeptName">Cash & Accounts</div>
+                        <div class="slip-date" id="modalIssuedTime">01 Nov 2026, 05:30 PM</div>
+                    </div>
+
+                    <div class="slip-token-container">
+                        <span class="token-label">YOUR TOKEN NUMBER</span>
+                        <div class="token-giant" id="modalTokenNumber">ACC-000</div>
+                        <div class="token-priority-pill" id="modalPriorityPill">Regular</div>
+                    </div>
+
+                    <div class="slip-meta-grid">
+                        <div class="slip-meta">
+                            <span class="label">Customer</span>
+                            <span class="val" id="modalCustName">Walk-in Guest</span>
+                        </div>
+                        <div class="slip-meta">
+                            <span class="label">People Ahead</span>
+                            <span class="val text-amber" id="modalAhead">0</span>
+                        </div>
+                        <div class="slip-meta">
+                            <span class="label">Estimated Wait</span>
+                            <span class="val text-emerald" id="modalWait">~10 mins</span>
+                        </div>
+                        <div class="slip-meta">
+                            <span class="label">Status</span>
+                            <span class="val text-blue">Waiting</span>
+                        </div>
+                    </div>
+
+                    <!-- Simulated QR Code SVG -->
+                    <div class="qr-container">
+                        <svg class="qr-svg" viewBox="0 0 100 100" width="100" height="100">
+                            <!-- SVG QR Pattern -->
+                            <rect width="100" height="100" fill="#ffffff" rx="8"/>
+                            <rect x="10" y="10" width="25" height="25" fill="#0f172a" rx="3"/>
+                            <rect x="14" y="14" width="17" height="17" fill="#ffffff" rx="1"/>
+                            <rect x="17" y="17" width="11" height="11" fill="#0f172a"/>
+                            <rect x="65" y="10" width="25" height="25" fill="#0f172a" rx="3"/>
+                            <rect x="69" y="14" width="17" height="17" fill="#ffffff" rx="1"/>
+                            <rect x="72" y="17" width="11" height="11" fill="#0f172a"/>
+                            <rect x="10" y="65" width="25" height="25" fill="#0f172a" rx="3"/>
+                            <rect x="14" y="69" width="17" height="17" fill="#ffffff" rx="1"/>
+                            <rect x="17" y="72" width="11" height="11" fill="#0f172a"/>
+                            <rect x="42" y="15" width="8" height="8" fill="#0f172a"/>
+                            <rect x="52" y="25" width="8" height="8" fill="#0f172a"/>
+                            <rect x="42" y="42" width="16" height="16" fill="#2563eb" rx="2"/>
+                            <rect x="65" y="45" width="8" height="8" fill="#0f172a"/>
+                            <rect x="45" y="68" width="12" height="8" fill="#0f172a"/>
+                            <rect x="68" y="72" width="14" height="12" fill="#0f172a"/>
+                        </svg>
+                        <span class="qr-hint">Scan with phone to track queue live</span>
+                    </div>
+
+                    <div class="slip-footer">
+                        <p>Please watch the Digital Display Board or wait for your audio call.</p>
+                        <div class="slip-actions">
+                            <button class="btn-action" onclick="trackIssuedTicket()"><i class="bi bi-broadcast"></i> Track Live</button>
+                            <button class="btn-action btn-outline" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================= -->
+        <!-- TAB 2: LIVE PUBLIC QUEUE DISPLAY (TV SCREEN / BOARD)           -->
+        <!-- ============================================================= -->
+        <section class="tab-view" id="view-display">
+            <div class="display-banner">
+                <div class="display-branding">
+                    <span class="live-dot-pulse"></span>
+                    <h1>PUBLIC SERVICE QUEUE DISPLAY</h1>
+                </div>
+                <div class="display-clock" id="displayBoardClock">--:--:--</div>
+            </div>
+
+            <!-- Last Called Announcement Bar -->
+            <div class="now-called-hero" id="nowCalledHero">
+                <div class="called-label">NOW CALLING</div>
+                <div class="called-content">
+                    <div class="called-token-badge" id="heroToken">--</div>
+                    <div class="called-arrow"><i class="bi bi-arrow-right"></i></div>
+                    <div class="called-counter" id="heroCounter">COUNTER --</div>
+                    <div class="called-dept-pill" id="heroDept">Awaiting Next Call...</div>
+                </div>
+                <div class="called-voice-indicator" id="voiceIndicator">
+                    <i class="bi bi-megaphone-fill"></i>
+                </div>
+            </div>
+
+            <!-- Active Counters Grid -->
+            <div class="display-counters-section">
+                <h3 class="section-title"><i class="bi bi-display"></i> Active Service Counters</h3>
+                <div class="counters-grid" id="displayCountersGrid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Next Up In Queue and Department Load Split -->
+            <div class="display-split-grid">
+                <div class="next-up-card">
+                    <h3><i class="bi bi-hourglass-split"></i> Next Up in Queue (Please Be Ready)</h3>
+                    <div class="next-up-list" id="displayNextUpList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="dept-summary-card">
+                    <h3><i class="bi bi-layers-fill"></i> Department Queue Status</h3>
+                    <div class="dept-summary-list" id="displayDeptSummaryList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================= -->
+        <!-- TAB 3: COUNTER OPERATOR DESK                                   -->
+        <!-- ============================================================= -->
+        <section class="tab-view" id="view-operator">
+            <div class="view-header">
+                <div class="view-titles">
+                    <h2><i class="bi bi-person-workspace gradient-text"></i> Counter Operator Workstation</h2>
+                    <p>Manage customer calls, mark completions, view your department's waiting queue, and log handling times.</p>
+                </div>
+
+                <!-- Select Active Counter Operator -->
+                <div class="counter-selector-wrap">
+                    <label for="activeCounterSelect"><i class="bi bi-arrow-left-right"></i> Switch Counter:</label>
+                    <select id="activeCounterSelect" class="form-select" onchange="onCounterSwitch()">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="operator-layout">
+                <!-- Left: Active Serving Panel -->
+                <div class="operator-serving-card">
+                    <div class="serving-header">
+                        <div>
+                            <span class="op-counter-badge" id="opCounterName">Counter 01</span>
+                            <span class="op-dept-badge" id="opDeptName">Cash & Accounts</span>
+                        </div>
+                        <div class="op-staff-name" id="opStaffName"><i class="bi bi-person-circle"></i> Operator</div>
+                    </div>
+
+                    <div class="current-customer-box" id="currentCustomerBox">
+                        <span class="box-label">CURRENTLY SERVING</span>
+                        <div class="active-token-hero" id="opCurrentToken">--</div>
+                        <div class="customer-info-line" id="opCustomerName">No customer currently called</div>
+                        <div class="customer-priority-tag" id="opPriorityTag">--</div>
+
+                        <div class="service-timer-wrap">
+                            <i class="bi bi-stopwatch"></i>
+                            <span class="timer-label">Service Elapsed:</span>
+                            <span class="timer-digits" id="opServiceTimer">00:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Operator Action Controls -->
+                    <div class="operator-actions-grid">
+                        <button class="btn-op btn-call-next" id="btnCallNext" onclick="operatorCallNext()">
+                            <i class="bi bi-bell-fill"></i>
+                            <span>Call Next Customer</span>
+                        </button>
+
+                        <button class="btn-op btn-recall" id="btnRecall" onclick="operatorRecall()">
+                            <i class="bi bi-megaphone-fill"></i>
+                            <span>Recall / Chime</span>
+                        </button>
+
+                        <button class="btn-op btn-complete" id="btnComplete" onclick="operatorComplete()">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Complete Service</span>
+                        </button>
+
+                        <button class="btn-op btn-noshow" id="btnNoShow" onclick="operatorNoShow()">
+                            <i class="bi bi-person-x-fill"></i>
+                            <span>Mark No-Show</span>
+                        </button>
+                    </div>
+
+                    <div class="counter-status-toggles">
+                        <span>Counter Mode:</span>
+                        <div class="status-toggle-btns">
+                            <button class="btn-toggle active" id="btnStatusAvailable" onclick="setCounterStatus('AVAILABLE')">
+                                <i class="bi bi-check2"></i> Ready
+                            </button>
+                            <button class="btn-toggle" id="btnStatusBreak" onclick="setCounterStatus('ON_BREAK')">
+                                <i class="bi bi-cup-hot"></i> Break
+                            </button>
+                            <button class="btn-toggle" id="btnStatusOffline" onclick="setCounterStatus('OFFLINE')">
+                                <i class="bi bi-power"></i> Closed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Department Queue Waiting List -->
+                <div class="operator-queue-card">
+                    <div class="queue-header">
+                        <h3><i class="bi bi-people-fill"></i> Waiting in Queue (<span id="opWaitingQueueCount">0</span>)</h3>
+                        <button class="btn-refresh-sm" onclick="loadOperatorView()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                    </div>
+
+                    <div class="waiting-tickets-table-wrap">
+                        <table class="tickets-table">
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th>Customer</th>
+                                    <th>Priority</th>
+                                    <th>Wait Time</th>
+                                    <th>Position</th>
+                                </tr>
+                            </thead>
+                            <tbody id="opWaitingTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================= -->
+        <!-- TAB 4: TRACK MY TOKEN (CUSTOMER MOBILE VIEW)                   -->
+        <!-- ============================================================= -->
+        <section class="tab-view" id="view-track">
+            <div class="view-header">
+                <div class="view-titles">
+                    <h2><i class="bi bi-qr-code-scan gradient-text"></i> Live Customer Ticket Tracker</h2>
+                    <p>Track your token in real-time, see how many people are ahead, and get your estimated service countdown.</p>
+                </div>
+            </div>
+
+            <div class="tracker-search-container">
+                <form class="tracker-search-bar" onsubmit="event.preventDefault(); trackEnteredToken();">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="trackTokenInput" placeholder="Enter Token Number (e.g. ACC-003, LON-002)" class="track-input">
+                    <button type="submit" class="btn-track-submit">Track Status</button>
+                </form>
+            </div>
+
+            <div class="tracker-card-container" id="trackerResultContainer">
+                <div class="empty-state">
+                    <i class="bi bi-ticket-perforated"></i>
+                    <p>Enter your token number above or issue a new ticket from the Kiosk tab.</p>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================= -->
+        <!-- TAB 5: AI CROWD PREDICTION & CONGESTION FORECAST              -->
+        <!-- ============================================================= -->
+        <section class="tab-view" id="view-prediction">
+            <div class="view-header">
+                <div class="view-titles">
+                    <h2><i class="bi bi-graph-up-arrow gradient-text"></i> Smart Crowd Prediction Engine</h2>
+                    <p>M/M/c Queuing Model & Time-Series Exponential Smoothing forecasting peak hours, visitor influx, and optimal counter staffing.</p>
+                </div>
+
+                <!-- Prediction Controls -->
+                <div class="prediction-filters">
+                    <div class="filter-item">
+                        <label for="predictDaySelect"><i class="bi bi-calendar-event"></i> Forecast Day:</label>
+                        <select id="predictDaySelect" class="form-select" onchange="loadPredictionData()">
+                            <option value="1">Monday (High Rush)</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday (Weekend Eve Rush)</option>
+                            <option value="6">Saturday (Half Day)</option>
+                            <option value="7">Sunday (Minimal)</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="predictDeptSelect"><i class="bi bi-building"></i> Department:</label>
+                        <select id="predictDeptSelect" class="form-select" onchange="loadPredictionData()">
+                            <option value="">All Departments (Facility-wide)</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Insights Top Alert Cards -->
+            <div class="insights-summary-grid">
+                <div class="insight-card peak-alert">
+                    <div class="insight-icon text-amber"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="insight-content">
+                        <span class="insight-label">Peak Congestion Window</span>
+                        <strong class="insight-value" id="predPeakWindow">Calculating...</strong>
+                        <span class="insight-sub">Expect maximum wait times</span>
+                    </div>
+                </div>
+
+                <div class="insight-card calm-alert">
+                    <div class="insight-icon text-emerald"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="insight-content">
+                        <span class="insight-label">Least Crowded Window</span>
+                        <strong class="insight-value" id="predLowestWindow">Calculating...</strong>
+                        <span class="insight-sub">Optimal window for fastest service</span>
+                    </div>
+                </div>
+
+                <div class="insight-card footfall-alert">
+                    <div class="insight-icon text-blue"><i class="bi bi-people-fill"></i></div>
+                    <div class="insight-content">
+                        <span class="insight-label">Forecasted Total Footfall</span>
+                        <strong class="insight-value" id="predTotalCrowd">-- visitors</strong>
+                        <span class="insight-sub">Average wait: <span id="predAvgDailyWait">--m</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Best Arrival Slots Recommendation Banner -->
+            <div class="recommendation-banner" id="recommendationBanner">
+                <div class="rec-header">
+                    <i class="bi bi-stars gradient-text"></i>
+                    <strong>AI "Best Time To Visit" Recommended Windows:</strong>
+                </div>
+                <div class="rec-slots-pills" id="recSlotsPills">
+                    <!-- Populated dynamically -->
+                </div>
+                <p class="rec-note" id="recAlertNotice">Analyzing historical influx curves...</p>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="prediction-charts-grid">
+                <!-- Chart 1: Hourly Visitor Influx & Congestion -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3><i class="bi bi-bar-chart-line-fill"></i> 24-Hour Predicted Visitor Influx & Staffing Capacity</h3>
+                        <span class="chart-tag">Hourly Forecast</span>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="hourlyArrivalsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Estimated Wait Time Progression -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3><i class="bi bi-stopwatch-fill"></i> Expected Queue Wait Time vs Counter Capacity</h3>
+                        <span class="chart-tag">Wait Estimation</span>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="hourlyWaitChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day of Week Comparative Chart -->
+            <div class="chart-card full-width-chart">
+                <div class="chart-header">
+                    <h3><i class="bi bi-calendar3"></i> Day-of-Week Footfall Pattern (Monday to Sunday Analysis)</h3>
+                    <span class="chart-tag">Historical Volume Comparison</span>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="dayTrendsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Detailed Hourly Forecast Table -->
+            <div class="prediction-table-card">
+                <h3><i class="bi bi-table"></i> Detailed Hourly Crowd & Counter Allocation Breakdown</h3>
+                <div class="table-responsive">
+                    <table class="tickets-table">
+                        <thead>
+                            <tr>
+                                <th>Hour Window</th>
+                                <th>Predicted Visitors</th>
+                                <th>Expected Wait Time</th>
+                                <th>Congestion Level</th>
+                                <th>Recommended Counters</th>
+                                <th>Confidence Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hourlyTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ============================================================= -->
+        <!-- TAB 6: DATABASE CONNECTIVITY & SYSTEM OPERATIONS              -->
+        <!-- ============================================================= -->
+        <section class="tab-view" id="view-database">
+            <div class="view-header">
+                <div class="view-titles">
+                    <h2><i class="bi bi-database-check gradient-text"></i> Database Connectivity & System Ops</h2>
+                    <p>Live persistence metrics, relational schema tables, direct H2 console access, and live audit logging.</p>
+                </div>
+                <div class="db-actions">
+                    <button class="btn-action btn-outline" onclick="openH2Console()">
+                        <i class="bi bi-box-arrow-up-right"></i> Open H2 SQL Console
+                    </button>
+                    <button class="btn-action btn-danger" onclick="reseedDatabase()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset Demo Database
+                    </button>
+                </div>
+            </div>
+
+            <!-- Database Connection Card -->
+            <div class="db-connection-hero">
+                <div class="db-hero-icon">
+                    <i class="bi bi-hdd-network-fill"></i>
+                </div>
+                <div class="db-hero-details">
+                    <div class="db-status-line">
+                        <span class="badge-status-connected"><i class="bi bi-check-circle-fill"></i> Database Connected & Persistent</span>
+                        <span class="db-engine">Engine: H2 Database Engine (with MySQL/PostgreSQL schema compatibility)</span>
+                    </div>
+                    <div class="db-connection-params">
+                        <code><strong>JDBC URL:</strong> jdbc:h2:file:./data/smartqueue</code>
+                        <code><strong>ORM:</strong> Hibernate 6.5 / Spring Data JPA</code>
+                        <code><strong>Dialect:</strong> org.hibernate.dialect.H2Dialect</code>
+                        <code><strong>Driver:</strong> org.h2.Driver</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Database Tables Summary -->
+            <div class="db-tables-grid">
+                <div class="db-table-stat-card">
+                    <div class="tbl-icon text-blue"><i class="bi bi-building"></i></div>
+                    <div class="tbl-info">
+                        <span class="tbl-name">DEPARTMENTS</span>
+                        <strong class="tbl-count" id="dbCountDept">4</strong>
+                        <span class="tbl-desc">Active routing service units</span>
+                    </div>
+                </div>
+
+                <div class="db-table-stat-card">
+                    <div class="tbl-icon text-purple"><i class="bi bi-display"></i></div>
+                    <div class="tbl-info">
+                        <span class="tbl-name">COUNTERS</span>
+                        <strong class="tbl-count" id="dbCountCounter">6</strong>
+                        <span class="tbl-desc">Physical service workstations</span>
+                    </div>
+                </div>
+
+                <div class="db-table-stat-card">
+                    <div class="tbl-icon text-amber"><i class="bi bi-ticket-perforated-fill"></i></div>
+                    <div class="tbl-info">
+                        <span class="tbl-name">QUEUE_TICKETS</span>
+                        <strong class="tbl-count" id="dbCountTickets">--</strong>
+                        <span class="tbl-desc">Tokens issued today</span>
+                    </div>
+                </div>
+
+                <div class="db-table-stat-card">
+                    <div class="tbl-icon text-emerald"><i class="bi bi-clock-history"></i></div>
+                    <div class="tbl-info">
+                        <span class="tbl-name">CROWD_HISTORY</span>
+                        <strong class="tbl-count" id="dbCountHistory">1,120</strong>
+                        <span class="tbl-desc">Hourly ML time-series records</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Audit Log Table of Recent Queue Tickets -->
+            <div class="db-audit-card">
+                <div class="card-header-flex">
+                    <h3><i class="bi bi-journal-code"></i> Live Tickets Database Table Log</h3>
+                    <button class="btn-refresh-sm" onclick="loadDatabaseAudit()"><i class="bi bi-arrow-clockwise"></i> Refresh DB</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="tickets-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Token</th>
+                                <th>Department</th>
+                                <th>Customer</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Counter</th>
+                                <th>Issued At</th>
+                                <th>Wait (min)</th>
+                                <th>Service (min)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbAuditTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Application Script -->
+    <script src="js/app.js"></script>
+</body>
+</html>
